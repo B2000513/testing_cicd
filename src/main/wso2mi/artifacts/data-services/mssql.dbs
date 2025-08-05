@@ -1,0 +1,26 @@
+<data name="mssql" serviceNamespace="" serviceGroup="" transports="http https" disableStreaming="true">
+    <description/>
+    <config id="testing">
+        <property name="driverClassName">com.microsoft.sqlserver.jdbc.SQLServerDriver</property>
+        <property name="url">jdbc:sqlserver://localhost:1433;databaseName=userdb;trustServerCertificate=true</property>
+        <property name="username">root</property>
+        <property name="password">root</property>
+    </config>
+
+    <query id="get_data_query" useConfig="testing">
+        <sql>SELECT us_id, us_name FROM dbo.users</sql>
+        <result element="Users" rowName="User">
+            <element name="id" column="us_id" xsdType="int"/>
+            <element name="name" column="us_name" xsdType="string"/>    
+        </result>
+        <properties>
+            <property name="fetchDirection">forward</property>
+            <property name="forceStoredProc">false</property>
+            <property name="forceJDBCBatchRequests">false</property>
+        </properties>
+    </query>
+
+    <resource method="GET" path="/data" disableStreaming="true">
+        <call-query href="get_data_query"/>
+    </resource>
+</data>

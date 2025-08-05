@@ -1,0 +1,11 @@
+<datasource>
+    <name>testing</name>
+    <definition type="RDBMS">
+        <configuration>
+            <driverClassName>com.microsoft.sqlserver.jdbc.SQLServerDriver</driverClassName>
+            <url>jdbc:sqlserver://localhost:1433;databaseName=userdb</url>
+            <username>root</username>
+            <password>root</password>
+        </configuration>
+    </definition>
+</datasource>
