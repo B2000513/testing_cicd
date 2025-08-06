@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wso2mi
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: wso2mi
+  template:
+    metadata:
+      labels:
+        app: wso2mi
+    spec:
+      containers:
+        - name: wso2mi
+          image: wso2mi-local:latest
+          ports:
+            - containerPort: 8290
+            - containerPort: 8253
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: wso2mi-service
+spec:
+  selector:
+    app: wso2mi
+  ports:
+    - protocol: TCP
+      port: 8290
+      targetPort: 8290
+  type: NodePort
