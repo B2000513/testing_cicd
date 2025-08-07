@@ -21,6 +21,7 @@ jobs:
           --build-arg BASE_IMAGE=wso2/wso2mi:4.4.0 \
           -f deployment/docker/Dockerfile \
           deployment/docker
+          
 
     - name: Load Docker Image into Minikube
       if: runner.os == 'Linux'
