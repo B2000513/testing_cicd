@@ -19,7 +19,7 @@ jobs:
       run: |
        docker build -t wso2mi-local:latest \
         --build-arg BASE_IMAGE=wso2/wso2mi:4.4.0 \
-        -f Dockerfile \
+        -f deployment/docker/Dockerfile \
         deployment/docker/
         
 
