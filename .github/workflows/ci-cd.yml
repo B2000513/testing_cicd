@@ -1,33 +1,55 @@
-name: Build & Deploy to Minikube
+name: Build, Deploy & Test WSO2MI on Minikube
 
 on:
   push:
     branches: [main]
 
 jobs:
-  build:
+  build-deploy-test:
     runs-on: ubuntu-latest
 
     steps:
     - name: Checkout Code
       uses: actions/checkout@v3
 
-    - name: Set up Docker
-      uses: docker/setup-buildx-action@v2
+    - name: Set up Minikube
+      uses: medyagh/setup-minikube@master
+      with:
+        kubernetes-version: v1.30.0
+
+    - name: Enable Minikube Docker Env
+      run: |
+        eval $(minikube docker-env)
 
     - name: Build Docker Image (from deployment/docker)
       run: |
         docker build -t wso2mi-local:latest \
           --build-arg BASE_IMAGE=wso2/wso2mi:4.4.0 \
-         -f Dockerfile \
-        deployment/docker
-          
+          -f deployment/docker/Dockerfile \
+          deployment/docker/resources
 
-    - name: Load Docker Image into Minikube
-      if: runner.os == 'Linux'
+    - name: Verify Image in Minikube
       run: |
-        minikube image load wso2mi-local:latest
+        docker images | grep wso2mi-local
 
     - name: Deploy to Minikube
       run: |
         kubectl apply -f k8s/deployment.yaml
+        kubectl rollout status deployment/wso2mi --timeout=120s
+
+    - name: Wait for Service to be Ready
+      run: |
+        echo "Waiting for service to be ready..."
+        sleep 20
+        kubectl get pods -o wide
+        kubectl get svc
+
+    - name: Port Forward WSO2MI Service
+      run: |
+        nohup kubectl port-forward service/wso2mi-service 8290:8290 &
+        sleep 5
+
+    - name: Test WSO2MI API (/data endpoint)
+      run: |
+        echo "Testing WSO2MI API..."
+        curl -v http://localhost:8290/data || exit 1
