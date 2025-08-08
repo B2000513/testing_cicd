@@ -1,102 +1,72 @@
-name: Build, Deploy & Test WSO2MI on Minikube
+name: WSO2 MI CI/CD
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+  pull_request:
 
 jobs:
-  # ---------- STAGE 1: Build ----------
-  build:
+  build-test-deploy:
     runs-on: ubuntu-latest
+
+    services:
+      mssql:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: Y
+          SA_PASSWORD: YourStrong!Passw0rd
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd "timeout 5 bash -c 'echo > /dev/tcp/localhost/1433'" 
+          --health-interval 10s 
+          --health-timeout 5s 
+          --health-retries 10
+
     steps:
-    - name: Checkout Code
-      uses: actions/checkout@v3
+    # 1. Checkout code
+    - name: Checkout Repository
+      uses: actions/checkout@v4
 
-    - name: Set up Minikube
-      uses: medyagh/setup-minikube@master
+    # 2. Setup Java & Maven
+    - name: Set up JDK 11
+      uses: actions/setup-java@v4
       with:
-        kubernetes-version: v1.30.0
+        java-version: '11'
+        distribution: 'temurin'
 
-    - name: Enable Minikube Docker Env
+    # 3. Build CAR file
+    - name: Build CAR
+      run: mvn clean package
+
+    # 4. Run WSO2 MI in Docker with your CAR deployed
+    - name: Run WSO2 MI
       run: |
-        eval $(minikube docker-env)
+        docker run -d --name wso2mi \
+          -p 8290:8290 -p 8253:8253 \
+          -v ${{ github.workspace }}/target:/home/wso2carbon/wso2mi/repository/deployment/server/carbonapps \
+          --link mssql:mssql \
+          wso2/wso2mi:4.4.0
 
-    - name: Build WSO2MI Docker Image
+    # 5. Wait for MI to start
+    - name: Wait for WSO2 MI
+      run: sleep 30
+
+    # 6. Test API endpoint
+    - name: Test Data Service
       run: |
-        docker build -t wso2mi-local:latest \
-          --build-arg BASE_IMAGE=wso2/wso2mi:4.4.0 \
-          -f deployment/docker/Dockerfile \
-          deployment/docker
+        RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8290/services/mssql/data)
+        if [ "$RESPONSE" -ne 200 ]; then
+          echo "❌ API test failed with HTTP code $RESPONSE"
+          exit 1
+        fi
+        echo "✅ API test passed"
 
-    - name: Save Docker Image to Tar
-      run: docker save wso2mi-local:latest -o wso2mi.tar
-
-    - name: Upload Image Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: wso2mi-image
-        path: wso2mi.tar
-
-  # ---------- STAGE 2: Deploy ----------
-  deploy:
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-    - name: Checkout Code
-      uses: actions/checkout@v3
-
-    - name: Set up Minikube
-      uses: medyagh/setup-minikube@master
-      with:
-        kubernetes-version: v1.30.0
-
-    - name: Download Image Artifact
-      uses: actions/download-artifact@v4
-      with:
-        name: wso2mi-image
-
-    - name: Load Docker Image into Minikube
+    # 7. (Optional) Deploy to Production MI
+    - name: Deploy to Prod MI
+      if: github.ref == 'refs/heads/main'
       run: |
-        eval $(minikube docker-env)
-        docker load -i wso2mi.tar
-
-    - name: Deploy to Minikube
-      run: |
-        kubectl apply -f k8s/deployment.yaml
-        kubectl rollout status deployment/wso2mi --timeout=120s
-
-    - name: Upload Kube Config
-      run: |
-        mkdir -p ~/.kube
-        cp ~/.kube/config kubeconfig
-      shell: bash
-
-    - uses: actions/upload-artifact@v4
-      with:
-        name: kubeconfig
-        path: kubeconfig
-
-  # ---------- STAGE 3: Test ----------
-  test:
-    runs-on: ubuntu-latest
-    needs: deploy
-    steps:
-    - name: Download Kube Config
-      uses: actions/download-artifact@v4
-      with:
-        name: kubeconfig
-
-    - name: Restore Kube Config
-      run: |
-        mkdir -p ~/.kube
-        cp kubeconfig ~/.kube/config
-
-    - name: Port Forward WSO2MI
-      run: |
-        nohup kubectl port-forward service/wso2mi-service 8290:8290 &
-        sleep 5
-
-    - name: Test /data Endpoint
-      run: |
-        echo "Testing /data..."
-        curl -v http://localhost:8290/data
+        curl -u ${{ secrets.WSO2_USER }}:${{ secrets.WSO2_PASS }} \
+          -T target/*.car \
+          http://prod-mi.example.com:8290/carbonapps
