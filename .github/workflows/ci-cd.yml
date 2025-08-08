@@ -44,10 +44,9 @@ jobs:
     - name: Run WSO2 MI
       run: |
         docker run -d --name wso2mi \
-          -p 8290:8290 -p 8253:8253 \
-          -v ${{ github.workspace }}/target:/home/wso2carbon/wso2mi/repository/deployment/server/carbonapps \
-          --link mssql:mssql \
-          wso2/wso2mi:4.4.0
+        -p 8290:8290 -p 8253:8253 \
+        -v ${{ github.workspace }}/target:/home/wso2carbon/wso2mi/repository/deployment/server/carbonapps \
+        wso2/wso2mi:4.4.0
 
     # 5. Wait for MI to start
     - name: Wait for WSO2 MI
