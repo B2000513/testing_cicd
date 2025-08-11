@@ -19,9 +19,9 @@ jobs:
         ports:
           - 1433:1433
         options: >-
-          --health-cmd "timeout 5 bash -c 'echo > /dev/tcp/localhost/1433'" 
-          --health-interval 10s 
-          --health-timeout 5s 
+          --health-cmd "echo > /dev/tcp/localhost/1433"
+          --health-interval 10s
+          --health-timeout 5s
           --health-retries 10
 
     steps:
@@ -40,19 +40,31 @@ jobs:
     - name: Build CAR
       run: mvn clean package
 
-    # 4. Run WSO2 MI in Docker with your CAR deployed
+    # 4. Wait for MSSQL to be ready
+    - name: Wait for MSSQL
+      run: |
+        echo "Waiting for MSSQL to be ready..."
+        for i in {1..30}; do
+          /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P YourStrong!Passw0rd -Q "SELECT 1" && break
+          echo "Still waiting..."
+          sleep 2
+        done
+
+    # 5. Run WSO2 MI in Docker (same network as services)
     - name: Run WSO2 MI
       run: |
+        docker network connect $(docker network ls --filter name=github_network --format "{{.ID}}") $(docker ps -qf "ancestor=mcr.microsoft.com/mssql/server:2022-latest")
         docker run -d --name wso2mi \
-        -p 8290:8290 -p 8253:8253 \
-        -v ${{ github.workspace }}/target:/home/wso2carbon/wso2mi/repository/deployment/server/carbonapps \
-        wso2/wso2mi:4.4.0
+          --network=$(docker network ls --filter name=github_network --format "{{.Name}}") \
+          -p 8290:8290 -p 8253:8253 \
+          -v ${{ github.workspace }}/target:/home/wso2carbon/wso2mi/repository/deployment/server/carbonapps \
+          wso2/wso2mi:4.4.0
 
-    # 5. Wait for MI to start
+    # 6. Wait for MI to start
     - name: Wait for WSO2 MI
       run: sleep 30
 
-    # 6. Test API endpoint
+    # 7. Test API endpoint
     - name: Test Data Service
       run: |
         RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8290/services/mssql/data)
@@ -62,7 +74,7 @@ jobs:
         fi
         echo "✅ API test passed"
 
-    # 7. (Optional) Deploy to Production MI
+    # 8. Deploy to Production MI (only on main)
     - name: Deploy to Prod MI
       if: github.ref == 'refs/heads/main'
       run: |
