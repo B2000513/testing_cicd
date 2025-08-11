@@ -49,9 +49,6 @@ jobs:
         wso2/wso2mi:4.4.0
 
 
-    - name: List CAR files
-      run: ls -l target/carbonapps
-
     # 5. Wait for MI to start
     - name: Wait for WSO2 MI
       run: sleep 60
