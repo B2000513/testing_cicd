@@ -48,9 +48,17 @@ jobs:
         -v ${{ github.workspace }}/target:/home/wso2carbon/wso2mi/repository/deployment/server/carbonapps \
         wso2/wso2mi:4.4.0
 
+
+    - name: List CAR files
+      run: ls -l target/carbonapps
+
     # 5. Wait for MI to start
     - name: Wait for WSO2 MI
-      run: sleep 30
+      run: sleep 60
+
+    - name: Show MI logs
+      if: failure()
+      run: docker logs wso2mi
 
     # 6. Test API endpoint
     - name: Test Data Service
