@@ -14,7 +14,7 @@ permissions:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: wso2mi-mssql
+  IMAGE_NAME: wos2/wso2mi
   IMAGE_TAG: latest
 
 jobs:
