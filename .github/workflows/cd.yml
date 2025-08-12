@@ -1,0 +1,41 @@
+name: WSO2 MI CD
+
+on:
+  workflow_dispatch: # Manually trigger after CI success
+  workflow_run:
+    workflows: ["WSO2 MI CI"]
+    types:
+      - completed
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository_owner }}/wso2mi-mssql
+  IMAGE_TAG: latest
+  KUBE_NAMESPACE: dev
+  DEPLOYMENT_NAME: wso2mi-deployment
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout deployment configs (optional if you keep manifests in another repo)
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+
+      # 2. Set up kubectl
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.30.0'
+
+      # 3. Configure kubeconfig
+      - name: Configure kubeconfig
+        run: echo "${{ secrets.KUBECONFIG_DATA }}" | base64 --decode > kubeconfig
+
+      # 4. Update MI deployment image in Kubernetes
+      - name: Deploy to Kubernetes
+        run: |
+          export KUBECONFIG=kubeconfig
+          kubectl set image deployment/${{ env.DEPLOYMENT_NAME }} wso2mi=$REGISTRY/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} -n $KUBE_NAMESPACE
+          kubectl rollout status deployment/${{ env.DEPLOYMENT_NAME }} -n $KUBE_NAMESPACE
