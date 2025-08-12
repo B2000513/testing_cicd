@@ -51,6 +51,23 @@ jobs:
       - name: Build CAR
         run: mvn clean package
 
+      - name: Debug CAR File Location
+        run: |
+          echo "Listing target directory:"
+          ls -la ${{ github.workspace }}/target/
+          echo "Searching for CAR file:"
+          find ${{ github.workspace }} -type f -name "*.car"
+          CAR_FILE=$(find ${{ github.workspace }} -type f -name "*.car" | head -n 1)
+          if [ -z "$CAR_FILE" ]; then
+            echo "Error: No CAR file found"
+            exit 1
+          fi
+          echo "CAR file found: $CAR_FILE"
+          echo "Copying CAR file to deployment/docker/CompositeApps/"
+          mkdir -p deployment/docker/CompositeApps
+          cp "$CAR_FILE" deployment/docker/CompositeApps/
+          ls -la deployment/docker/CompositeApps/
+
       # 4. Build Docker image with CAR
       - name: Build Docker Image
         run: |
