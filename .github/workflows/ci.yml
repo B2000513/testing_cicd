@@ -50,7 +50,7 @@ jobs:
         run: |
           IMAGE_NAME_LC=$(echo "${{ env.IMAGE_NAME }}" | tr '[:upper:]' '[:lower:]')
           docker build --build-arg BASE_IMAGE=wso2/wso2mi:4.4.0 \
-            -t $REGISTRY/$IMAGE_NAME_LC/wso2mi-mssql:${{ env.IMAGE_TAG }} .
+            -t $REGISTRY/$IMAGE_NAME_LC/wso2mi-mssql:${{ env.IMAGE_TAG }} \
             -f deployment/docker/Dockerfile .
 
       # 5. Log in to GHCR
