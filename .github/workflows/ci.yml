@@ -51,7 +51,7 @@ jobs:
       - name: Build CAR
         run: mvn clean package
 
-      - name: Debug CAR File Location
+      - name: CAR File Location
         run: |
           echo "Listing target directory:"
           ls -la ${{ github.workspace }}/target/
