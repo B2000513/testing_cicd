@@ -47,7 +47,10 @@ jobs:
 
       # 4. Build Docker image with CAR
       - name: Build Docker Image
-        run: docker build --build-arg BASE_IMAGE=wso2/wso2mi:4.4.0 -t $REGISTRY/$IMAGE_NAME:$IMAGE_TAG .
+        run: |
+          IMAGE_NAME_LC=$(echo "${{ env.IMAGE_NAME }}" | tr '[:upper:]' '[:lower:]')
+          docker build --build-arg BASE_IMAGE=wso2/wso2mi:4.4.0 \
+            -t $REGISTRY/$IMAGE_NAME_LC/wso2mi-mssql:${{ env.IMAGE_TAG }} .
 
       # 5. Log in to GHCR
       - name: Log in to GitHub Container Registry
@@ -59,8 +62,9 @@ jobs:
 
       # 6. Push image to GHCR
       - name: Push Docker Image
-        run: docker push $REGISTRY/$IMAGE_NAME:$IMAGE_TAG
-
+        run: |
+          IMAGE_NAME_LC=$(echo "${{ env.IMAGE_NAME }}" | tr '[:upper:]' '[:lower:]')
+          docker push $REGISTRY/$IMAGE_NAME_LC/wso2mi-mssql:${{ env.IMAGE_TAG }}
       # 7. Run MI locally for testing
       - name: Run WSO2 MI (Local Test)
         run: |
